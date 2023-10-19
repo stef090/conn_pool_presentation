@@ -1,3 +1,5 @@
+from random import Random
+
 import psycopg2
 from time import sleep
 from threading import Thread
@@ -5,28 +7,35 @@ from threading import Thread
 # Function to simulate client behavior without connection pooling
 def simulate_client(client_id):
     conn = psycopg2.connect(
-        user="your_username",
-        password="your_password",
-        host="your_host",
-        port="your_port",
-        database="your_database"
+        user="televend",
+        password="televend",
+        host="localhost",
+        port="5432",
+        database="televend",
     )
 
     cursor = conn.cursor()
+    rand = Random()
+    while True:
+        try:
+            company_id = rand.randrange(1, 100)
+            cursor.execute(f"SELECT * FROM machine_locations where owner_id={company_id};")
+            result = cursor.fetchall()
+            print(f"Client {client_id} fetched data: {result}")
+        except (Exception, psycopg2.Error) as error:
+            print(f"Error occurred for client {client_id}: {error}")
+            if conn:
+                cursor.close()
+                conn.close()
 
-    try:
-        cursor.execute("SELECT * FROM your_table;")
-        result = cursor.fetchall()
-        print(f"Client {client_id} fetched data: {result}")
-    except (Exception, psycopg2.Error) as error:
-        print(f"Error occurred for client {client_id}: {error}")
-    finally:
-        if conn:
-            cursor.close()
-            conn.close()
 
 # Simulate multiple clients accessing the database
-for i in range(5):
-    thread = Thread(target=simulate_client, args=(i,))
-    thread.start()
-    sleep(1)  # Introduce a delay to stagger client connections
+def simulate_clients():
+    for i in range(10):
+        thread = Thread(target=simulate_client, args=(i,))
+        thread.start()
+        sleep(1)  # Introduce a delay to stagger client connections
+
+
+if __name__ == "__main__":
+    simulate_clients()
