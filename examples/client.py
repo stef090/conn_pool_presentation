@@ -7,11 +7,11 @@ from threading import Thread
 # Function to simulate client behavior without connection pooling
 def simulate_client(client_id):
     conn = psycopg2.connect(
-        user="televend",
-        password="televend",
+        user="your_host",
+        password="your_pass",
         host="localhost",
         port="5432",
-        database="televend",
+        database="your_host",
     )
 
     cursor = conn.cursor()
