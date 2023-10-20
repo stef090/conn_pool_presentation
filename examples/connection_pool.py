@@ -1,6 +1,9 @@
+from random import Random
+from time import sleep
+
 import psycopg2
 from queue import Queue
-from threading import Lock
+from threading import Lock, Thread
 
 
 class ConnectionPool:
@@ -36,24 +39,44 @@ class ConnectionPool:
 # Example usage:
 # Initialize the pool
 connection_pool = ConnectionPool(
-    max_connections=10,
-    database="your_db",
-    user="your_user",
-    password="your_pass",
+    max_connections=2,
+    database="db",
+    user="user",
+    password="pass",
     host="localhost",
 )
 
-# Get a connection from the pool
-# conn = connection_pool.get_connection()
 
-# Use the connection for database operations
-# cur = conn.cursor()
-# cur.execute("SELECT * FROM machine_locations")
-# rows = cur.fetchall()
-# print(rows)
+def simulate_client(client_id):
 
-# Release the connection back to the pool
-# connection_pool.release_connection(conn)
+    while True:
+        try:
+            conn = connection_pool.get_connection()
+            if conn is None:
+                print(f"Client {client_id} could not acquire connection.")
+                break
+            cursor = conn.cursor()
+            rand = Random()
+            company_id = rand.randrange(1, 100)
+            cursor.execute(
+                f"SELECT * FROM machine_locations where owner_id={company_id};"
+            )
+            result = cursor.fetchall()
+            print(f"Client {client_id} fetched data: {result}")
+            connection_pool.release_connection(conn)
+            print(f"Client {client_id} released connection.")
+        except (Exception, psycopg2.Error) as error:
+            print(f"Error occurred for client {client_id}: {error}")
+            if conn:
+                connection_pool.release_connection(conn)
 
-# Close all connections when done
-# connection_pool.close_all_connections()
+
+def simulate_clients():
+    for client_id in range(10):
+        thread = Thread(target=simulate_client, args=(client_id,))
+        thread.start()
+        sleep(1)
+
+
+if __name__ == "__main__":
+    simulate_clients()
