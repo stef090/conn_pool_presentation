@@ -20,6 +20,7 @@ class ConnectionPool:
         return psycopg2.connect(**self._connection_params)
 
     def get_connection(self):
+        # Acquire lock to prevent other clients from tampering with pool.
         with self._lock:
             if self._pool.empty():
                 return None

@@ -1,11 +1,9 @@
-class: center, middle
-background-image: url(https://th.bing.com/th/id/OIG.PdgarAuz7s12fBAtlQWV?pid=ImgGn)
+class: top, center
 # Database Connection Pooling
 
 ---
 
 # Agenda
-
 1. Introduction
 2. Technicals
 3. Postgres Architecture
@@ -15,9 +13,6 @@ background-image: url(https://th.bing.com/th/id/OIG.PdgarAuz7s12fBAtlQWV?pid=Img
 7. The solution...
 8. ... with problems
 9. Practical examples
-10. Conclusion
-11. Discussion
-12. Resources
 ---
 
 # Introduction
@@ -46,10 +41,15 @@ Let's start with an overview of the Postgres architecture.
 
 ???
 The **postgres server process** is the parent of all processes related to database cluster management.
+As a client request a connection, the server process forks and creates a copy of itself in the **backend** process.
 
-Each **postgres backend process** handles all queries and statements issued by a connected client. Each backend process also allocates a local memory area for query processing. A backend process can only access one database at a time
+Each **postgres backend process** handles all queries and statements issued by a connected client. 
+A backend process also allocates a local memory area for query processing. 
+A backend process can only access one database at a time.
 
-All processes have access to a **shared memory** pool. All of the processes used by a PostgreSQL server use this shared memory to communicate with each other. 
+All processes have access to a **shared memory** pool. 
+All of the processes used by a PostgreSQL server use this shared memory to communicate with each other.
+The shared memory is also used for **shared buffers**, **locks and synchronization**, **caches**, etc.
 
 There are also background processes which use the shared memory, each with their own specific task:
 
@@ -81,6 +81,23 @@ If a client wants to establish a connection, it must first contact the superviso
 After a connection request is received, the `supervisor` will fork a new `backend` process.
 The client will then start communicating with the backend process, which accepts and parses queries, creates *execution plans*, executes them, and returns the retrieved rows from the database by transmitting them over.
 
+One important thing to keep in mind is that a single backend process may only connect to a single database.
+This of course means that if your application connects to multiple databases, it requires a connection to each of these.
+
+---
+
+# Why multiprocessing?
+- PRO:
+	- Stability
+	- Robustness
+	- Security
+	- Isolation
+
+
+
+???
+Multiprocessing was the approach chosen by the architects of PostgreSQL to handling connections. 
+It has several advantages such as ensuring stability, robustness, and isolation when executing queries.
 
 ---
 
@@ -94,15 +111,13 @@ The client will then start communicating with the backend process, which accepts
 	- Startup costs
 	- Memory usage
 	- OS limitations
-
-
 ???
 While multiprocessing has several benefits, such as ensuring stability, robustness, and isolation when executing queries, there are of course drawbacks. 
 The main drawback is the higher cost of process startup when compared to starting a thread. 
 Each new process requires a certain amount of memory for its execution, including memory for various data structures, query execution, and caching.
 
-
 ---
+
 
 # The problem?
  - Lots of connections and small transactions
@@ -140,17 +155,26 @@ This has led to the creation of middlewares such as PGBouncer.
   - different libs, different approaches
   - no guarantees of efficiency
 
+???
+Libs will invariably have different approaches to connection pooling, leading to different behavior. 
+One poorly setup client lib can potentially disrupt all other clients by taking up all connections for example.
 ---
 
 # Practical examples
-- 
+
+???
+Let's look at practical examples of creating connections for each client, and using a very simple connection pool.
+The connection pool needs to manage connections as clients request them, returning them to the pool and giving them out as new clients request them.
+
 ---
 
 # Conclusion
 
----
-
-# Discussion
+???
+As we could see, the connection pool technique mitigates the costs of forking processes to execute queries.
+But there are several considerations to this approach.
+One of the primary concerns is the method of recycling connections. 
+The presentation on PgBouncer and PgPool will clarify these approaches.
 
 ---
 
@@ -159,3 +183,8 @@ https://scalegrid.io/blog/postgresql-connection-pooling-part-1-pros-and-cons/
 https://scalegrid.io/blog/postgresql-connection-pooling-part-2-pgbouncer/
 https://scalegrid.io/blog/postgresql-connection-pooling-part-3-pgpool-ii/
 https://scalegrid.io/blog/postgresql-connection-pooling-part-4-pgbouncer-vs-pgpool/
+---
+
+# Discussion
+
+
